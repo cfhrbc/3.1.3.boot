@@ -1,94 +1,96 @@
 
-    // Ваш код для добавления нового пользователя
-    document.getElementById('newUserForm').addEventListener('submit', function (event) {
+document.getElementById("newUserForm").addEventListener("submit", async function (event) {
     event.preventDefault();
     const formData = new FormData(this);
-
-    const rolesSelected = Array.from(document.getElementById('roles').selectedOptions).map(option => parseInt(option.value, 10));
+    const rolesSelected = Array.from(document.getElementById("roles").selectedOptions).map(option => parseInt(option.value, 10));
 
     const user = {
-    name: formData.get('name'),
-    surname: formData.get('surname'),
-    age: parseInt(formData.get('age'), 10),
-    email: formData.get('email'),
-    password: formData.get('password'),
-    roles: rolesSelected
-};
+        name: formData.get("name"),
+        surname: formData.get("surname"),
+        age: parseInt(formData.get("age"), 10),
+        email: formData.get("email"),
+        password: formData.get("password"),
+        roles: rolesSelected,
+    };
 
-        console.log('Creating user:', user);
+    console.log("Creating user:", user);
 
-        fetch('/admin/create', {
-            method: 'POST',
+    try {
+        const response = await fetch("/admin/create", {
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json'
+                "Content-Type": "application/json",
             },
-            body: JSON.stringify(user)
-        })
-            .then(response => {
-                console.log('Response status:', response.status);
-                if (response.status === 200 || response.status === 201) {
-                    loadUsers();  // Используем loadUsers() для обновления таблицы после добавления нового пользователя
-                    alert('Пользователь успешно создан!');
-                    form.reset();  // Сбрасываем форму (используем сохранённую ссылку)
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('newUserModal'));
-                    modal.hide();  // Закрываем модальное окно
-                } else {
-                    return response.json().then(data => {
-                        throw new Error(data.message || 'Не удалось создать пользователя');
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error creating user:', error);
-                alert('Ошибка при создании пользователя: ' + error.message);
-            });
-    });
+            body: JSON.stringify(user),
+        });
 
-    document.addEventListener("DOMContentLoaded", function () {
-        // Функция для загрузки пользователей через API
-        function loadUsers() {
-            fetch('/admin/users') // обращаемся к новому API для получения JSON
-                .then(response => response.json()) // получаем данные в формате JSON
-                .then(data => {
-                    const tableBody = document.getElementById('users-table-body');
-                    tableBody.innerHTML = ''; // очищаем таблицу
-
-                    data.forEach(user => {
-                        // Создаем строку таблицы для каждого пользователя
-                        const row = document.createElement('tr');
-
-                        row.innerHTML = `
-                        <td>${user.id}</td>
-                        <td>${user.name}</td>
-                        <td>${user.surname}</td>
-                        <td>${user.age}</td>
-                        <td>${user.email}</td>
-                        <td>${user.roles.map(role => role.name).join(', ')}</td>
-                        <td><a href="/admin/edit/${user.id}" class="btn btn-info">Edit</a></td>
-                        <td><button class="btn btn-danger" onclick="deleteUser(${user.id})">Delete</button></td>
-                    `;
-                        tableBody.appendChild(row);
-                    });
-                })
-                .catch(error => console.error('Ошибка при загрузке пользователей:', error));
+        if (response.ok) {
+            await loadUsers(); // Wait for users to load before resetting form
+            alert("Пользователь успешно создан!");
+            const form = this;
+            form.reset();
+            const modal = bootstrap.Modal.getInstance(document.getElementById("newUserModal"));
+            modal.hide();
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.message || "Не удалось создать пользователя");
         }
-    // Функция для удаления пользователя
-    function deleteUser(userId) {
-    fetch(`/admin/users/${userId}`, {
-    method: 'DELETE'
-})
-    .then(response => {
-    if (response.ok) {
-    loadUsers(); // Перезагружаем список пользователей после удаления
-} else {
-    console.error('Ошибка при удалении пользователя');
-}
+    } catch (error) {
+        console.error("Error creating user:", error);
+        alert("Ошибка при создании пользователя: " + error.message);
+    }
 });
-}
 
-    // Загружаем пользователей при загрузке страницы
+document.addEventListener("DOMContentLoaded", function () {
+    // Function to load users from the API
+    async function loadUsers() {
+        try {
+            const response = await fetch("/admin/users");
+            const data = await response.json();
+
+            console.log("User data:", data); // Log user data to verify
+            const tableBody = document.getElementById("users-table-body");
+            tableBody.innerHTML = ""; // Clear the table
+
+            data.forEach((user) => {
+                // Create a row for each user
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${user.id}</td>
+                    <td>${user.name}</td>
+                    <td>${user.surname}</td>
+                    <td>${user.age}</td>
+                    <td>${user.email}</td>
+                    <td>${user.roles.map((role) => role.name).join(", ")}</td>
+                    <td><a href="/admin/edit/${user.id}" class="btn btn-info">Edit</a></td>
+                    <td><button class="btn btn-danger" onclick="deleteUser(${user.id})">Delete</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error("Ошибка при загрузке пользователей:", error);
+        }
+    }
+
+    // Function to delete a user
+    async function deleteUser(userId) {
+        try {
+            const response = await fetch(`/admin/users/${userId}`, {
+                method: "DELETE",
+            });
+
+            if (response.ok) {
+                loadUsers(); // Reload user list after deletion
+            } else {
+                console.error("Ошибка при удалении пользователя");
+            }
+        } catch (error) {
+            console.error("Error deleting user:", error);
+        }
+    }
+
+    // Load users when the page loads
     loadUsers();
 });
-
 
 
